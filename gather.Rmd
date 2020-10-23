@@ -1,6 +1,8 @@
 ---
 title: "Dataset Merger"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -268,7 +270,7 @@ ISO_3166_1_names <- ISO_3166_1 %>%
 
 gps_data_iso <- left_join(gps_data, ISO_3166_1_names, by = c("isocode" = "Alpha_3")) 
 
-gps_data_iso <- gps_data_iso %>%
+gps_data <- gps_data_iso %>%
   # Rename isocodes into full country names, using the common name instead of official 
   # if available
   
@@ -285,31 +287,70 @@ gps_data_iso <- gps_data_iso %>%
 ```{r}
 # Merge with our dataset
 
-dataset_with_gps <- full_join(dataset, gps_data_iso, by = "geography") 
+dataset_with_gps <- full_join(dataset, gps_data, by = "geography") 
 
-# Identify country rows that did not merge correctly
+# Check for country rows that did not merge correctly. Some countries might have 
+# not beeen in the original dataset, but others might just be named differently, 
+# which needs to be fixed.
 
-dataset_discrepancies <- dataset_with_gps %>%
+dataset_with_gps %>%
   filter(!(geography %in% dataset$geography)) %>%
-  select(geography) %>%
-  print()
+  select(geography)
 ```
-
 
 ```{r}
 # Manually fix country names that did not merge properly by renaming 
 # in the original GPS dataset and merging again
 
-```
+gps_data[gps_data == "Czechia"] <- "Czech Republic"
+gps_data[gps_data == "Iran, Islamic Republic of"] <- "Iran"
+gps_data[gps_data == "Korea, Republic of"] <- "South Korea"
+gps_data[gps_data == "Russian Federation"] <- "Russia"
+gps_data[gps_data == "United States"] <- "United States of America"
 
+dataset <- full_join(dataset, gps_data, by = "geography") 
+```
 
 ## Corruption Perceptions Index
 #### Source: https://www.transparency.org/en/cpi/
 
-I downloaded a dataset containing CPI scores for ~180 countries from 2006 to 2019.
-Put the corresponding years into variable names and merge into our dataset:
+I downloaded a dataset containing time series CPI data for ~180 countries from 
+2012 to 2019. 
+
+Clean and merge into our dataset:
 
 ```{r cpi}
-
+cpi_data <- read_excel("input_data/CPI2019.xlsx", 
+    sheet = "CPI Timeseries 2012 - 2019", 
+    skip = 2) %>%
+  
+  # Only keep CPI scores for each country from 2012 to 2019
+  
+  clean_names() %>%
+  select(country, cpi_score_2012, cpi_score_2013, cpi_score_2014, cpi_score_2015,
+         cpi_score_2016, cpi_score_2017, cpi_score_2018, cpi_score_2019)
 ```
 
+```{r cpi_merge}
+dataset_with_cpi <- full_join(dataset, cpi_data, by = c("geography" = "country")) 
+
+dataset_with_cpi %>%
+  filter(!(geography %in% dataset$geography)) %>%
+  select(geography)
+```
+```{r cpi_final_merge}
+# Manually fix country names that did not merge properly by renaming 
+# in the original GPS dataset and merging again
+
+cpi_data[cpi_data == "Korea, South"] <- "South Korea"
+
+dataset <- full_join(dataset, cpi_data, by = c("geography" = "country"))
+```
+
+
+## Final Result
+
+Write the final merged dataset into a .csv
+```{r}
+write_csv(dataset, "output_data/dataset.csv")
+```
