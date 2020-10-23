@@ -1,0 +1,315 @@
+---
+title: "Dataset Merger"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plyr)
+library(dplyr)
+library(janitor)
+library(readxl)
+library(tidyverse)
+```
+
+## Gallup Dataset
+
+The following dataset includes data for 16 questions, observed in 140+ 
+countries in years from 2006 to 2019. For now, I'm proceeding with just data from 2010 and 2019 to adjust the format.
+
+The default output from the Gallup platform is an .xlsx file with a different
+sheet for each question. Here, I pivot the dataframes and merge all of them into 
+one.
+
+The format of the spreadsheet varies, so here, I breakup exports into 3 categories 
+of questions by the types of response, to allow for efficient cleaning:
+
+* yes/no:
+  + Corruption in Government
+  + Corruption Within Businesses
+  + Smile or Laugh
+  + Feel Well-Rested
+  + Experienced Enjoyment Yesterday
+  + Experienced Physical Pain Yesterday
+  + Experience Worry Yesterday
+  + Experience Stress Yesterday
+  + Experience Sadness Yesterday
+  + Experience Anger Yesterday
+  + ??? Worried About Money
+
+* very_likely/somewhat_likely/not_likely_at_all:
+  + Likelihood Stranger Would Return a Lost Bag
+  + Likelihood Police Would Return a Lost Bag
+  + Likelihood Neighbor Would Return Lost Bag
+
+* value:
+  + Positive Experience Index
+  + Negative Experience Index
+
+First, create functions for cleaning, pivoting variables, and renaming the columns 
+in the dataset.
+
+```{r gallup_clean}
+# Read in Excel sheet corresponding to a question
+
+read_gallup <- function(path, question){
+  data <- read_excel(path,
+                     sheet = question, 
+                     skip = 6) %>%
+    
+    # Make column names simpler
+    
+    clean_names()
+  
+  return(data)
+}
+
+# Reorder the pivoted columns by year instead of by response type (variable name)
+
+reorder_columns <- function(suffixes, data){
+  names_to_order <- map(suffixes, ~ names(data)[grep(paste0("_", .x), names(data))]) %>% unlist
+  
+  names_id <- setdiff(names(data), names_to_order)
+  
+  data <- data %>%
+    select(all_of(names_id), all_of(names_to_order))
+  
+  return(data)
+}
+
+extra_columns_yes_no = c("demographic", "demographic_value", "dk_rf", "n_size")
+response_types_yes_no = c("yes", "no")
+extra_columns_likely = c("demographic", "demographic_value", "dk", "refused", "n_size")
+response_types_likely = c("very_likely", "somewhat_likely", "not_likely_at_all")
+extra_columns_value = c("demographic", "demographic_value", "n_size")
+response_types_value = "value"
+
+clean_gallup <- function(path, question, prefix, extra_columns, response_types){
+  data <- read_gallup(path, question)
+  
+  # Store years for reordering purposes
+  
+  suffixes <- unique(data$time)
+
+  # Pivot the dataframe to have different variables by year
+  
+  data <- data %>%
+    select(!all_of(extra_columns)) %>%
+    pivot_wider(names_from = time,
+                values_from = all_of(response_types))
+  
+  # Reorder the pivoted columns by year instead of by response type (variable name)
+  
+  data <- reorder_columns(suffixes, data)
+  
+  # Add question prefix to column names
+  
+  data <- data %>% rename_at(2:ncol(.), ~ paste(prefix, ., sep = "_"))
+}
+```
+
+Second, create dataframes for each of the 16 questions.
+
+```{r gallup_dataframes}
+path1 <- "input_data/GallupAnalytics_Export_yes_no.xlsx"
+
+corrupt_government <- clean_gallup(path1, 
+                                   "Corruption in Government", 
+                                   "corrupt_government", 
+                                   extra_columns_yes_no, 
+                                   response_types_yes_no)
+corrupt_bussinesses <- clean_gallup(path1, 
+                                    "Corruption Within Businesses", 
+                                    "corrupt_bussinesses", 
+                                    extra_columns_yes_no, 
+                                    response_types_yes_no)
+smile_laugh <- clean_gallup(path1, 
+                            "Smile or Laugh", 
+                            "smile_laugh", 
+                            extra_columns_yes_no, 
+                            response_types_yes_no)
+rested <- clean_gallup(path1, 
+                       "Feel Well-Rested", 
+                       "rested", 
+                       extra_columns_yes_no, 
+                       response_types_yes_no)
+enjoyment <- clean_gallup(path1, 
+                          "Experienced Enjoyment Yesterday", 
+                          "enjoyment", 
+                          extra_columns_yes_no, 
+                          response_types_yes_no)
+physical_pain <- clean_gallup(path1, 
+                              "Experienced Physical Pain Yeste", 
+                              "physical_pain", 
+                              extra_columns_yes_no, 
+                              response_types_yes_no)
+worry <- clean_gallup(path1, 
+                      "Experience Worry Yesterday", 
+                      "worry", 
+                      extra_columns_yes_no, 
+                      response_types_yes_no)
+stress <- clean_gallup(path1, 
+                       "Experience Stress Yesterday", 
+                       "stress", 
+                       extra_columns_yes_no, 
+                       response_types_yes_no)
+sadness <- clean_gallup(path1, 
+                        "Experience Sadness Yesterday", 
+                        "sadness", 
+                        extra_columns_yes_no, 
+                        response_types_yes_no)
+anger <- clean_gallup(path1, 
+                      "Experience Anger Yesterday", 
+                      "anger", 
+                      extra_columns_yes_no, 
+                      response_types_yes_no)
+
+path2 <- "input_data/GallupAnalytics_full.xlsx"
+
+stranger_return_bag <- clean_gallup(path2, 
+                      "Likelihood Stranger Would Retur", 
+                      "stranger_return_bag", 
+                      extra_columns_likely, 
+                      response_types_likely)
+police_return_bag <- clean_gallup(path2, 
+                      "Likelihood Police Would Return ", 
+                      "police_return_bag", 
+                      extra_columns_likely, 
+                      response_types_likely)
+neighbor_return_bag <- clean_gallup(path2, 
+                      "Likelihood Neighbor Would Retur", 
+                      "neighbor_return_bag", 
+                      extra_columns_likely, 
+                      response_types_likely)
+
+positive_index <- clean_gallup(path2, 
+                      "Positive Experience Index", 
+                      "positive_index", 
+                      extra_columns_value, 
+                      response_types_value)
+negative_index <- clean_gallup(path2, 
+                      "Negative Experience Index", 
+                      "negative_index", 
+                      extra_columns_value, 
+                      response_types_value)
+```
+
+Finally, merge all response variables into one dataset by country.
+
+```{r gallup_merge}
+# Create a list of dataframes to merge
+
+indicators <- list(
+  # yes/no:
+  
+  corrupt_government, corrupt_bussinesses, smile_laugh, rested, enjoyment, physical_pain, worry, stress, sadness, anger, 
+  
+  # likely:
+  
+  stranger_return_bag, police_return_bag, neighbor_return_bag,
+  
+  # value:
+  
+  positive_index, negative_index)
+
+# Perform a full_join on all datsets
+
+gallup_data <- join_all(indicators, by = "geography", type = "full")
+
+
+```
+
+
+## Data from Chopik, O’Brien, Konrath, 2017
+#### Source: https://journals.sagepub.com/doi/abs/10.1177/0022022116673910
+
+The data is presented in a .docx file, which I converted to an .xlsx and then
+pulled out the 3 variables observed in 63 countries:
+
+* Mean Total Empathy
+* Mean Perspective Taking
+* Mean Empathic Concern
+
+I changed some of the country names in the resulting .xlsx for consistency with
+the Gallup dataset to make merging possible.
+
+Here, I merge them with our existing dataset.
+
+### TODO:
+According to the paper, data was collected in XXXX.
+
+
+```{r chopik}
+chopik_data <- read_excel("input_data/Chopik.xlsx") %>%
+  clean_names()
+
+dataset <- full_join(gallup_data, chopik_data, by = "geography")
+```
+
+## Global Preferences Survey
+#### Source: https://www.briq-institute.org/global-preferences/download
+
+I downloaded the dataset, which was presented in the .dta format native to Stata. 
+It also uses ISO 3166-1 alpha-3 for country names, which I'll convert using package `ISOcodes` for the purpose of merging datasets by full country name.
+
+Convert and merge all variables to our dataset:
+
+### TODO:
+Data was collected in XXXX.
+
+```{r gps}
+library(ISOcodes)
+
+gps_data <- read_excel("input_data/GPS_country.xlsx")
+
+ISO_3166_1_names <- ISO_3166_1 %>%
+  select(Alpha_3, Name, Common_name)
+
+
+gps_data_iso <- left_join(gps_data, ISO_3166_1_names, by = c("isocode" = "Alpha_3")) 
+
+gps_data_iso <- gps_data_iso %>%
+  # Rename isocodes into full country names, using the common name instead of official 
+  # if available
+  
+  mutate(geography = if_else(condition = is.na(Common_name),
+                                          Name,
+                                          Common_name)) %>%
+  
+  # Select only the new country name column (geography) and all variables
+  
+  select(geography, colnames(gps_data_iso)[2:48])
+```
+
+
+```{r}
+# Merge with our dataset
+
+dataset_with_gps <- full_join(dataset, gps_data_iso, by = "geography") 
+
+# Identify country rows that did not merge correctly
+
+dataset_discrepancies <- dataset_with_gps %>%
+  filter(!(geography %in% dataset$geography)) %>%
+  select(geography) %>%
+  print()
+```
+
+
+```{r}
+# Manually fix country names that did not merge properly by renaming 
+# in the original GPS dataset and merging again
+
+```
+
+
+## Corruption Perceptions Index
+#### Source: https://www.transparency.org/en/cpi/
+
+I downloaded a dataset containing CPI scores for ~180 countries from 2006 to 2019.
+Put the corresponding years into variable names and merge into our dataset:
+
+```{r cpi}
+
+```
+
