@@ -1,0 +1,72 @@
+---
+title: "Merged Dataset Guide"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(readxl)
+```
+# Overview
+
+The `dataset.csv` file contains the merged data by country from the following 6 sources:
+
+- Gallup Analytics (16 questions with data from 2006 to 2020)
+- Differences in Empathic Concern and Perspective Taking Across 63 Countries (Chopik et al., 2017; data collected before 2016)
+- Global Preferences Survey (data collected in 2012)
+- Corruption Perceptions Index (data from 2012 to 2019)
+- Civic Honesty Around the Globe (Cohn et al., 2019; data collected between 2013 and 2016)
+- Universals and variations in moral decisions (Awad et al., 2020; data collected from 2017 to 2019)
+
+## Gallup Analytics
+Captures 16 variables, broken down by year of observation (various ranges from 2006 to 2020, depending on a question). Values in the columns correspond to the percentages of people answering the following:
+
+* yes/no:
+  + `corrupt_government`: Corruption in Government 
+  + `corrupt_bussinesses`: Corruption Within Businesses
+  + `smile_laugh`: Smile or Laugh
+  + `rested`: Feel Well-Rested
+  + `enjoyment`: Experienced Enjoyment Yesterday
+  + `physical_pain`: Experienced Physical Pain Yesterday
+  + `worry`: Experience Worry Yesterday
+  + `stress`: Experience Stress Yesterday
+  + `sadness`: Experience Sadness Yesterday
+  + `anger`: Experience Anger Yesterday
+
+* strongly_disagree/somewhat_disagree/neither/somewhat_agree/strongly_agree:
+  + `worry_money`: Worried About Money
+  
+* very_likely/somewhat_likely/not_likely_at_all:
+  + `stranger_return_bag`: Likelihood Stranger Would Return a Lost Bag
+  + `police_return_bag`: Likelihood Police Would Return a Lost Bag
+  + `neighbor_return_bag`: Likelihood Neighbor Would Return Lost Bag
+
+* value:
+  + `positive_index`: Positive Experience Index
+  + `negative_index`: Negative Experience Index
+  
+## Empathy
+* 3 variables:
+  + `mean_empathetic_concern`
+  + `mean_perspective_taking`
+  + `mean_total_empathy`
+
+## Global Preferences Survey
+* variables from `patience` to `europe_east`
+* definitions of variables are below:
+
+```{r echo = FALSE}
+gps_guide <- read_excel("gps_guide.xlsx")
+kable(gps_guide)
+```
+
+## Corruption Perceptions Index (data from 2012 to 2019):
+* variables: `cpi_score_2012` to `cpi_score_2019`
+
+## Returning lost wallets
+* variables: `return_percentage` for each of the 4 experimental conditions: `NoMoney`, `Money`, `BigMoney`, `NoKey`
+
+## Moral preferences in sacrificial dilemmas
+* variables `RML` to `Cultural_tigthness_and_looseness` (definitions should be integrated)
+* percentages choosing to sacrifice in each scenario variant: `Switch`, `Loop`, `Footbridge`

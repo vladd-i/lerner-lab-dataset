@@ -1841,8 +1841,8 @@ indicators &lt;- list(
 
 gallup_data &lt;- join_all(indicators, by = &quot;geography&quot;, type = &quot;full&quot;)</code></pre>
 </div>
-<div id="data-from-chopik-obrien-konrath-2017" class="section level2">
-<h2>Data from Chopik, O’Brien, Konrath, 2017</h2>
+<div id="empathy-chopik-et-al.-2017" class="section level2">
+<h2>Empathy (Chopik et al., 2017)</h2>
 <div id="source-httpsjournals.sagepub.comdoiabs10.11770022022116673910" class="section level4">
 <h4>Source: <a href="https://journals.sagepub.com/doi/abs/10.1177/0022022116673910" class="uri">https://journals.sagepub.com/doi/abs/10.1177/0022022116673910</a></h4>
 <p>The data is presented in a .docx file, which I converted to an .xlsx and then pulled out the 3 variables observed in 63 countries:</p>
@@ -1948,17 +1948,90 @@ dataset_with_cpi %&gt;%
   </script>
 </div>
 <pre class="r"><code># Manually fix country names that did not merge properly by renaming 
-# in the original GPS dataset and merging again
+# in the original CPI dataset and merging again
 
 cpi_data[cpi_data == &quot;Korea, South&quot;] &lt;- &quot;South Korea&quot;
 
 dataset &lt;- full_join(dataset, cpi_data, by = c(&quot;geography&quot; = &quot;country&quot;))</code></pre>
 </div>
 </div>
+<div id="returning-lost-wallets-in-40-countries-cohn-et-al.-2019." class="section level1">
+<h1>Returning lost wallets in 40 countries (Cohn et al., 2019).</h1>
+<p>Manipulate experiment results to obtain rates (%) of wallet returns in each country by experimental condition:</p>
+<pre class="r"><code>lost_wallets &lt;- read.csv(&quot;input_data/lost_wallets_data.csv&quot;)
+
+wallet_return_metrics &lt;- lost_wallets %&gt;%
+  select(Country, cond, response) %&gt;%
+  group_by(Country, cond) %&gt;%
+  summarize(return_percentage = mean(response), .groups = &quot;drop&quot;) %&gt;%
+  mutate(cond = as.factor(cond)) %&gt;%
+  mutate(cond = case_when(cond == 0 ~ &quot;NoMoney&quot;,
+                          cond == 1 ~ &quot;Money&quot;,
+                          cond == 2 ~ &quot;BigMoney&quot;,
+                          cond == 3 ~ &quot;NoKey&quot;)) %&gt;%
+  pivot_wider(names_from = cond, 
+              values_from = return_percentage, 
+              names_glue = &quot;{.value}_{cond}&quot;)</code></pre>
+<p>Data was collected between 2013 and 2016 depending on the country.</p>
+</div>
+<div id="moral-preferences-in-sacrificial-dilemmas-awad-et-al.-2020" class="section level1">
+<h1>Moral preferences in sacrificial dilemmas (Awad et al., 2020)</h1>
+<pre class="r"><code>load(&quot;input_data/moral_preferences.rdata&quot;)
+
+ISO_3166_1_names2 &lt;- ISO_3166_1 %&gt;%
+  select(Alpha_2, Name, Common_name)
+
+
+moral_preference_data_iso &lt;- left_join(ddl, ISO_3166_1_names2, by = c(&quot;two_letter_code&quot; = &quot;Alpha_2&quot;)) 
+
+moral_preference_data &lt;- moral_preference_data_iso %&gt;%
+  # Rename isocodes into full country names, using the common name instead of official 
+  # if available
+  
+  mutate(geography = if_else(condition = is.na(Common_name),
+                                          Name,
+                                          Common_name)) %&gt;%
+  
+  # Select only the new country name column (geography) and all variables
+  
+  select(geography, RML:Footbridge)</code></pre>
+<pre class="r"><code># Merge with our dataset
+
+dataset_with_moral_preference &lt;- full_join(dataset, moral_preference_data, by = &quot;geography&quot;) 
+
+# Check for country rows that did not merge correctly. Some countries might have 
+# not beeen in the original dataset, but others might just be named differently, 
+# which needs to be fixed.
+
+dataset_with_moral_preference %&gt;%
+  filter(!(geography %in% dataset$geography)) %&gt;%
+  select(geography)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"American Samoa"},{"1":"Andorra"},{"1":"Antigua and Barbuda"},{"1":"Aruba"},{"1":"Belize"},{"1":"Bermuda"},{"1":"Cayman Islands"},{"1":"Curaçao"},{"1":"Czechia"},{"1":"Faroe Islands"},{"1":"Fiji"},{"1":"French Polynesia"},{"1":"Gibraltar"},{"1":"Greenland"},{"1":"Guam"},{"1":"Iran, Islamic Republic of"},{"1":"Isle of Man"},{"1":"Kiribati"},{"1":"Korea, Democratic People's Republic of"},{"1":"Korea, Republic of"},{"1":"Liechtenstein"},{"1":"Macao"},{"1":"Marshall Islands"},{"1":"Micronesia, Federated States of"},{"1":"Monaco"},{"1":"New Caledonia"},{"1":"Northern Mariana Islands"},{"1":"Palau"},{"1":"Palestine, State of"},{"1":"Puerto Rico"},{"1":"Russian Federation"},{"1":"Samoa"},{"1":"San Marino"},{"1":"Sint Maarten (Dutch part)"},{"1":"Saint Kitts and Nevis"},{"1":"Saint Martin (French part)"},{"1":"Syrian Arab Republic"},{"1":"Tonga"},{"1":"Turks and Caicos Islands"},{"1":"Tuvalu"},{"1":"United States"},{"1":"Virgin Islands, U.S."}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<pre class="r"><code># Manually fix country names that did not merge properly by renaming 
+# in the original GPS dataset and merging again
+
+moral_preference_data[moral_preference_data == &quot;Czechia&quot;] &lt;- &quot;Czech Republic&quot;
+moral_preference_data[moral_preference_data == &quot;Iran, Islamic Republic of&quot;] &lt;- &quot;Iran&quot;
+moral_preference_data[moral_preference_data == &quot;Korea, Republic of&quot;] &lt;- &quot;South Korea&quot;
+moral_preference_data[moral_preference_data == &quot;Russian Federation&quot;] &lt;- &quot;Russia&quot;
+moral_preference_data[moral_preference_data == &quot;United States&quot;] &lt;- &quot;United States of America&quot;
+
+dataset &lt;- full_join(dataset, moral_preference_data, by = &quot;geography&quot;) </code></pre>
 <div id="final-result" class="section level2">
 <h2>Final Result</h2>
 <p>Write the final merged dataset into a .csv</p>
-<pre class="r"><code>write_csv(dataset, &quot;output_data/dataset.csv&quot;)</code></pre>
+<pre class="r"><code># Arrange countries in alphabetical order
+
+dataset &lt;- dataset %&gt;%
+  rename(country = geography) %&gt;%
+  arrange(country)
+
+write_csv(dataset, &quot;output_data/dataset.csv&quot;)</code></pre>
+</div>
 </div>
 
 
