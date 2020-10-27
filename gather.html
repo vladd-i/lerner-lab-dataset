@@ -11,7 +11,7 @@
 
 
 
-<title>Dataset Merger</title>
+<title>Dataset Cleaner/Merger</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1645,16 +1645,16 @@ summary {
 
 
 
-<h1 class="title toc-ignore">Dataset Merger</h1>
+<h1 class="title toc-ignore">Dataset Cleaner/Merger</h1>
 
 </div>
 
 
-<div id="gallup-dataset" class="section level2">
-<h2>Gallup Dataset</h2>
-<p>The following dataset includes data for 16 questions, observed in 140+ countries in years from 2006 to 2019. For now, I’m proceeding with just data from 2010 and 2019 to adjust the format.</p>
+<div id="gallup-analytics" class="section level2">
+<h2>Gallup Analytics</h2>
+<p>The following dataset includes data for 16 questions, observed in 140+ countries in years from 2006 to 2019.</p>
 <p>The default output from the Gallup platform is an .xlsx file with a different sheet for each question. Here, I pivot the dataframes and merge all of them into one.</p>
-<p>The format of the spreadsheet varies, so here, I breakup exports into 3 categories of questions by the types of response, to allow for efficient cleaning:</p>
+<p>The formats of the spreadsheets vary, so here, I break up exports into 3 categories of questions by the types of responses, to allow for automated cleaning:</p>
 <ul>
 <li>yes/no:
 <ul>
@@ -1668,7 +1668,10 @@ summary {
 <li>Experience Stress Yesterday</li>
 <li>Experience Sadness Yesterday</li>
 <li>Experience Anger Yesterday</li>
-<li>??? Worried About Money</li>
+</ul></li>
+<li>strongly_disagree/somewhat_disagree/neither/somewhat_agree/strongly_agree:
+<ul>
+<li>Worried About Money</li>
 </ul></li>
 <li>very_likely/somewhat_likely/not_likely_at_all:
 <ul>
@@ -1700,7 +1703,8 @@ read_gallup &lt;- function(path, question){
 # Reorder the pivoted columns by year instead of by response type (variable name)
 
 reorder_columns &lt;- function(suffixes, data){
-  names_to_order &lt;- map(suffixes, ~ names(data)[grep(paste0(&quot;_&quot;, .x), names(data))]) %&gt;% unlist
+  names_to_order &lt;- map(suffixes, 
+                        ~ names(data)[grep(paste0(&quot;_&quot;, .x), names(data))]) %&gt;% unlist
   
   names_id &lt;- setdiff(names(data), names_to_order)
   
@@ -1710,10 +1714,22 @@ reorder_columns &lt;- function(suffixes, data){
   return(data)
 }
 
+# Declare reponse types and corresponding &quot;extra&quot; columns in the spreadsheet 
+# to be erased
+
 extra_columns_yes_no = c(&quot;demographic&quot;, &quot;demographic_value&quot;, &quot;dk_rf&quot;, &quot;n_size&quot;)
 response_types_yes_no = c(&quot;yes&quot;, &quot;no&quot;)
-extra_columns_likely = c(&quot;demographic&quot;, &quot;demographic_value&quot;, &quot;dk&quot;, &quot;refused&quot;, &quot;n_size&quot;)
+
+extra_columns_likely = c(&quot;demographic&quot;, &quot;demographic_value&quot;, &quot;dk&quot;, &quot;refused&quot;, 
+                         &quot;n_size&quot;)
 response_types_likely = c(&quot;very_likely&quot;, &quot;somewhat_likely&quot;, &quot;not_likely_at_all&quot;)
+
+extra_columns_agree_disagree = c(&quot;demographic&quot;, &quot;demographic_value&quot;, &quot;dk&quot;, 
+                                 &quot;refused&quot;, &quot;n_size&quot;)
+response_types_agree_disagree = c(&quot;strongly_disagree&quot;, &quot;somewhat_disagree&quot;, 
+                                  &quot;neither_agree_nor_disagree&quot;, &quot;somewhat_agree&quot;, 
+                                  &quot;strongly_agree&quot;)
+
 extra_columns_value = c(&quot;demographic&quot;, &quot;demographic_value&quot;, &quot;n_size&quot;)
 response_types_value = &quot;value&quot;
 
@@ -1740,83 +1756,97 @@ clean_gallup &lt;- function(path, question, prefix, extra_columns, response_type
   data &lt;- data %&gt;% rename_at(2:ncol(.), ~ paste(prefix, ., sep = &quot;_&quot;))
 }</code></pre>
 <p>Second, create dataframes for each of the 16 questions.</p>
-<pre class="r"><code>path1 &lt;- &quot;input_data/GallupAnalytics_Export_yes_no.xlsx&quot;
-
-corrupt_government &lt;- clean_gallup(path1, 
+<pre class="r"><code>corrupt_government &lt;- clean_gallup(&quot;input_data/corrupt_government.xlsx&quot;, 
                                    &quot;Corruption in Government&quot;, 
                                    &quot;corrupt_government&quot;, 
                                    extra_columns_yes_no, 
                                    response_types_yes_no)
-corrupt_bussinesses &lt;- clean_gallup(path1, 
+
+corrupt_bussinesses &lt;- clean_gallup(&quot;input_data/corrupt_bussinesses.xlsx&quot;, 
                                     &quot;Corruption Within Businesses&quot;, 
                                     &quot;corrupt_bussinesses&quot;, 
                                     extra_columns_yes_no, 
                                     response_types_yes_no)
-smile_laugh &lt;- clean_gallup(path1, 
+
+smile_laugh &lt;- clean_gallup(&quot;input_data/smile_laugh.xlsx&quot;, 
                             &quot;Smile or Laugh&quot;, 
                             &quot;smile_laugh&quot;, 
                             extra_columns_yes_no, 
                             response_types_yes_no)
-rested &lt;- clean_gallup(path1, 
+
+rested &lt;- clean_gallup(&quot;input_data/rested.xlsx&quot;, 
                        &quot;Feel Well-Rested&quot;, 
                        &quot;rested&quot;, 
                        extra_columns_yes_no, 
                        response_types_yes_no)
-enjoyment &lt;- clean_gallup(path1, 
+
+enjoyment &lt;- clean_gallup(&quot;input_data/enjoyment.xlsx&quot;, 
                           &quot;Experienced Enjoyment Yesterday&quot;, 
                           &quot;enjoyment&quot;, 
                           extra_columns_yes_no, 
                           response_types_yes_no)
-physical_pain &lt;- clean_gallup(path1, 
+
+physical_pain &lt;- clean_gallup(&quot;input_data/physical_pain.xlsx&quot;, 
                               &quot;Experienced Physical Pain Yeste&quot;, 
                               &quot;physical_pain&quot;, 
                               extra_columns_yes_no, 
                               response_types_yes_no)
-worry &lt;- clean_gallup(path1, 
+
+worry &lt;- clean_gallup(&quot;input_data/worry.xlsx&quot;, 
                       &quot;Experience Worry Yesterday&quot;, 
                       &quot;worry&quot;, 
                       extra_columns_yes_no, 
                       response_types_yes_no)
-stress &lt;- clean_gallup(path1, 
+
+stress &lt;- clean_gallup(&quot;input_data/stress.xlsx&quot;, 
                        &quot;Experience Stress Yesterday&quot;, 
                        &quot;stress&quot;, 
                        extra_columns_yes_no, 
                        response_types_yes_no)
-sadness &lt;- clean_gallup(path1, 
+
+sadness &lt;- clean_gallup(&quot;input_data/sadness.xlsx&quot;, 
                         &quot;Experience Sadness Yesterday&quot;, 
                         &quot;sadness&quot;, 
                         extra_columns_yes_no, 
                         response_types_yes_no)
-anger &lt;- clean_gallup(path1, 
+
+anger &lt;- clean_gallup(&quot;input_data/anger.xlsx&quot;, 
                       &quot;Experience Anger Yesterday&quot;, 
                       &quot;anger&quot;, 
                       extra_columns_yes_no, 
                       response_types_yes_no)
 
-path2 &lt;- &quot;input_data/GallupAnalytics_full.xlsx&quot;
+worry_money &lt;- clean_gallup(&quot;input_data/worry_money.xlsx&quot;, 
+                      &quot;Worried About Money&quot;, 
+                      &quot;worry_money&quot;, 
+                      extra_columns_agree_disagree, 
+                      response_types_agree_disagree)
 
-stranger_return_bag &lt;- clean_gallup(path2, 
+stranger_return_bag &lt;- clean_gallup(&quot;input_data/stranger_return_bag.xlsx&quot;, 
                       &quot;Likelihood Stranger Would Retur&quot;, 
                       &quot;stranger_return_bag&quot;, 
                       extra_columns_likely, 
                       response_types_likely)
-police_return_bag &lt;- clean_gallup(path2, 
+
+police_return_bag &lt;- clean_gallup(&quot;input_data/police_return_bag.xlsx&quot;, 
                       &quot;Likelihood Police Would Return &quot;, 
                       &quot;police_return_bag&quot;, 
                       extra_columns_likely, 
                       response_types_likely)
-neighbor_return_bag &lt;- clean_gallup(path2, 
+
+neighbor_return_bag &lt;- clean_gallup(&quot;input_data/neighbor_return_bag.xlsx&quot;, 
                       &quot;Likelihood Neighbor Would Retur&quot;, 
                       &quot;neighbor_return_bag&quot;, 
                       extra_columns_likely, 
                       response_types_likely)
 
-positive_index &lt;- clean_gallup(path2, 
+positive_index &lt;- clean_gallup(&quot;input_data/positive_index.xlsx&quot;, 
                       &quot;Positive Experience Index&quot;, 
                       &quot;positive_index&quot;, 
                       extra_columns_value, 
                       response_types_value)
-negative_index &lt;- clean_gallup(path2, 
+
+negative_index &lt;- clean_gallup(&quot;input_data/negative_index.xlsx&quot;, 
                       &quot;Negative Experience Index&quot;, 
                       &quot;negative_index&quot;, 
                       extra_columns_value, 
@@ -1827,7 +1857,12 @@ negative_index &lt;- clean_gallup(path2,
 indicators &lt;- list(
   # yes/no:
   
-  corrupt_government, corrupt_bussinesses, smile_laugh, rested, enjoyment, physical_pain, worry, stress, sadness, anger, 
+  corrupt_government, corrupt_bussinesses, smile_laugh, rested, enjoyment, 
+  physical_pain, worry, stress, sadness, anger, 
+  
+  # agree/disagree:
+  
+  worry_money,
   
   # likely:
   
@@ -1853,26 +1888,21 @@ gallup_data &lt;- join_all(indicators, by = &quot;geography&quot;, type = &quot;
 </ul>
 <p>I changed some of the country names in the resulting .xlsx for consistency with the Gallup dataset to make merging possible.</p>
 <p>Here, I merge them with our existing dataset.</p>
-</div>
-<div id="todo" class="section level3">
-<h3>TODO:</h3>
-<p>According to the paper, data was collected in XXXX.</p>
-<pre class="r"><code>chopik_data &lt;- read_excel(&quot;input_data/Chopik.xlsx&quot;) %&gt;%
+<p>Data was collected before 2016, though I couldn’t identify a specific year.</p>
+<pre class="r"><code>empathy_data &lt;- read_excel(&quot;input_data/empathy.xlsx&quot;) %&gt;%
   clean_names()
 
-dataset &lt;- full_join(gallup_data, chopik_data, by = &quot;geography&quot;)</code></pre>
+dataset &lt;- full_join(gallup_data, empathy_data, by = &quot;geography&quot;)</code></pre>
 </div>
 </div>
 <div id="global-preferences-survey" class="section level2">
 <h2>Global Preferences Survey</h2>
-<div id="source-httpswww.briq-institute.orgglobal-preferencesdownload" class="section level4">
-<h4>Source: <a href="https://www.briq-institute.org/global-preferences/download" class="uri">https://www.briq-institute.org/global-preferences/download</a></h4>
-<p>I downloaded the dataset, which was presented in the .dta format native to Stata. It also uses ISO 3166-1 alpha-3 for country names, which I’ll convert using package <code>ISOcodes</code> for the purpose of merging datasets by full country name.</p>
+<div id="source-httpswww.briq-institute.orgglobal-preferencesdownloads" class="section level4">
+<h4>Source: <a href="https://www.briq-institute.org/global-preferences/downloads" class="uri">https://www.briq-institute.org/global-preferences/downloads</a></h4>
+<p>I downloaded the dataset, which was presented in the .dta format native to Stata.</p>
+<p>It also uses ISO 3166-1 alpha-3 format for country names, which I’ll convert using the package <code>ISOcodes</code> for the purpose of merging datasets by full country name.</p>
 <p>Convert and merge all variables to our dataset:</p>
-</div>
-<div id="todo-1" class="section level3">
-<h3>TODO:</h3>
-<p>Data was collected in XXXX.</p>
+<p>Data was collected in 2012</p>
 <pre class="r"><code>library(ISOcodes)
 
 gps_data &lt;- read_excel(&quot;input_data/GPS_country.xlsx&quot;)
@@ -1880,12 +1910,14 @@ gps_data &lt;- read_excel(&quot;input_data/GPS_country.xlsx&quot;)
 ISO_3166_1_names &lt;- ISO_3166_1 %&gt;%
   select(Alpha_3, Name, Common_name)
 
+# Merge to pair up ISO codes with full country names
 
-gps_data_iso &lt;- left_join(gps_data, ISO_3166_1_names, by = c(&quot;isocode&quot; = &quot;Alpha_3&quot;)) 
+gps_data_iso &lt;- left_join(gps_data, ISO_3166_1_names, 
+                          by = c(&quot;isocode&quot; = &quot;Alpha_3&quot;)) 
 
 gps_data &lt;- gps_data_iso %&gt;%
-  # Rename isocodes into full country names, using the common name instead of official 
-  # if available
+  # Rename isocodes into full country names, using the common name instead 
+  # of official if available
   
   mutate(geography = if_else(condition = is.na(Common_name),
                                           Name,
@@ -1907,7 +1939,7 @@ dataset_with_gps %&gt;%
   select(geography)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"Czechia"},{"1":"Iran, Islamic Republic of"},{"1":"Korea, Republic of"},{"1":"Russian Federation"},{"1":"Suriname"},{"1":"United States"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"Czechia"},{"1":"Iran, Islamic Republic of"},{"1":"Korea, Republic of"},{"1":"Russian Federation"},{"1":"United States"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <pre class="r"><code># Manually fix country names that did not merge properly by renaming 
@@ -1944,19 +1976,22 @@ dataset_with_cpi %&gt;%
   select(geography)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"Bhutan"},{"1":"Seychelles"},{"1":"Bahamas"},{"1":"Barbados"},{"1":"Brunei Darussalam"},{"1":"Saint Vincent and the Grenadines"},{"1":"Korea, South"},{"1":"Cabo Verde"},{"1":"Dominica"},{"1":"Saint Lucia"},{"1":"Grenada"},{"1":"Oman"},{"1":"Cuba"},{"1":"Sao Tome and Principe"},{"1":"Vanuatu"},{"1":"Solomon Islands"},{"1":"Trinidad and Tobago"},{"1":"Guyana"},{"1":"Timor-Leste"},{"1":"Maldives"},{"1":"Laos"},{"1":"Papua New Guinea"},{"1":"Angola"},{"1":"Eritrea"},{"1":"Congo"},{"1":"Democratic Republic of the Congo"},{"1":"Guinea Bissau"},{"1":"Korea, North"},{"1":"Equatorial Guinea"},{"1":"South Sudan"},{"1":"Somalia"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"Seychelles"},{"1":"Bahamas"},{"1":"Barbados"},{"1":"Brunei Darussalam"},{"1":"Saint Vincent and the Grenadines"},{"1":"Korea, South"},{"1":"Cabo Verde"},{"1":"Dominica"},{"1":"Saint Lucia"},{"1":"Grenada"},{"1":"Sao Tome and Principe"},{"1":"Vanuatu"},{"1":"Solomon Islands"},{"1":"Timor-Leste"},{"1":"Maldives"},{"1":"Laos"},{"1":"Papua New Guinea"},{"1":"Eritrea"},{"1":"Congo"},{"1":"Democratic Republic of the Congo"},{"1":"Guinea Bissau"},{"1":"Korea, North"},{"1":"Equatorial Guinea"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <pre class="r"><code># Manually fix country names that did not merge properly by renaming 
 # in the original CPI dataset and merging again
 
 cpi_data[cpi_data == &quot;Korea, South&quot;] &lt;- &quot;South Korea&quot;
+cpi_data[cpi_data == &quot;Korea, North&quot;] &lt;- &quot;North Korea&quot;
 
 dataset &lt;- full_join(dataset, cpi_data, by = c(&quot;geography&quot; = &quot;country&quot;))</code></pre>
 </div>
 </div>
-<div id="returning-lost-wallets-in-40-countries-cohn-et-al.-2019." class="section level1">
-<h1>Returning lost wallets in 40 countries (Cohn et al., 2019).</h1>
+<div id="returning-lost-wallets-in-40-countries-cohn-et-al.-2019." class="section level2">
+<h2>Returning lost wallets in 40 countries (Cohn et al., 2019).</h2>
+<div id="source-httpsdataverse.harvard.edudataversehonesty" class="section level4">
+<h4>Source: <a href="https://dataverse.harvard.edu/dataverse/honesty" class="uri">https://dataverse.harvard.edu/dataverse/honesty</a></h4>
 <p>Manipulate experiment results to obtain rates (%) of wallet returns in each country by experimental condition:</p>
 <pre class="r"><code>lost_wallets &lt;- read.csv(&quot;input_data/lost_wallets_data.csv&quot;)
 
@@ -1971,22 +2006,50 @@ wallet_return_metrics &lt;- lost_wallets %&gt;%
                           cond == 3 ~ &quot;NoKey&quot;)) %&gt;%
   pivot_wider(names_from = cond, 
               values_from = return_percentage, 
-              names_glue = &quot;{.value}_{cond}&quot;)</code></pre>
+              names_glue = &quot;{.value}_{cond}&quot;) %&gt;%
+  rename(geography = Country)</code></pre>
+<pre class="r"><code># Merge with our dataset
+dataset_with_wallet_return &lt;- full_join(dataset, wallet_return_metrics, 
+                                        by = &quot;geography&quot;) 
+
+# Check for country rows that did not merge correctly. Some countries might have 
+# not beeen in the original dataset, but others might just be named differently, 
+# which needs to be fixed.
+
+dataset_with_wallet_return %&gt;%
+  filter(!(geography %in% dataset$geography)) %&gt;%
+  select(geography)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"UAE"},{"1":"UK"},{"1":"USA"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<pre class="r"><code># Manually fix country names that did not merge properly by renaming 
+# in the original lost wallet dataset and merging again
+
+wallet_return_metrics[wallet_return_metrics == &quot;UAE&quot;] &lt;- &quot;United Arab Emirates&quot;
+wallet_return_metrics[wallet_return_metrics == &quot;UK&quot;] &lt;- &quot;United Kingdom&quot;
+wallet_return_metrics[wallet_return_metrics == &quot;USA&quot;] &lt;- &quot;United States of America&quot;
+
+dataset &lt;- full_join(dataset, wallet_return_metrics, by = &quot;geography&quot;) </code></pre>
 <p>Data was collected between 2013 and 2016 depending on the country.</p>
 </div>
-<div id="moral-preferences-in-sacrificial-dilemmas-awad-et-al.-2020" class="section level1">
-<h1>Moral preferences in sacrificial dilemmas (Awad et al., 2020)</h1>
+</div>
+<div id="moral-preferences-in-sacrificial-dilemmas-awad-et-al.-2020" class="section level2">
+<h2>Moral preferences in sacrificial dilemmas (Awad et al., 2020)</h2>
+<div id="source-httpsosf.iomxa6zview_only33719a32d86a4ec186a21287a233040c" class="section level4">
+<h4>Source: <a href="https://osf.io/mxa6z/?view_only=33719a32d86a4ec186a21287a233040c" class="uri">https://osf.io/mxa6z/?view_only=33719a32d86a4ec186a21287a233040c</a></h4>
 <pre class="r"><code>load(&quot;input_data/moral_preferences.rdata&quot;)
 
 ISO_3166_1_names2 &lt;- ISO_3166_1 %&gt;%
   select(Alpha_2, Name, Common_name)
 
-
-moral_preference_data_iso &lt;- left_join(ddl, ISO_3166_1_names2, by = c(&quot;two_letter_code&quot; = &quot;Alpha_2&quot;)) 
+moral_preference_data_iso &lt;- left_join(ddl, ISO_3166_1_names2, 
+                                       by = c(&quot;two_letter_code&quot; = &quot;Alpha_2&quot;)) 
 
 moral_preference_data &lt;- moral_preference_data_iso %&gt;%
-  # Rename isocodes into full country names, using the common name instead of official 
-  # if available
+  # Rename isocodes into full country names, using the common name instead of 
+  # official if available
   
   mutate(geography = if_else(condition = is.na(Common_name),
                                           Name,
@@ -1997,7 +2060,8 @@ moral_preference_data &lt;- moral_preference_data_iso %&gt;%
   select(geography, RML:Footbridge)</code></pre>
 <pre class="r"><code># Merge with our dataset
 
-dataset_with_moral_preference &lt;- full_join(dataset, moral_preference_data, by = &quot;geography&quot;) 
+dataset_with_moral_preference &lt;- full_join(dataset, moral_preference_data, 
+                                           by = &quot;geography&quot;) 
 
 # Check for country rows that did not merge correctly. Some countries might have 
 # not beeen in the original dataset, but others might just be named differently, 
@@ -2008,19 +2072,22 @@ dataset_with_moral_preference %&gt;%
   select(geography)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"American Samoa"},{"1":"Andorra"},{"1":"Antigua and Barbuda"},{"1":"Aruba"},{"1":"Belize"},{"1":"Bermuda"},{"1":"Cayman Islands"},{"1":"Curaçao"},{"1":"Czechia"},{"1":"Faroe Islands"},{"1":"Fiji"},{"1":"French Polynesia"},{"1":"Gibraltar"},{"1":"Greenland"},{"1":"Guam"},{"1":"Iran, Islamic Republic of"},{"1":"Isle of Man"},{"1":"Kiribati"},{"1":"Korea, Democratic People's Republic of"},{"1":"Korea, Republic of"},{"1":"Liechtenstein"},{"1":"Macao"},{"1":"Marshall Islands"},{"1":"Micronesia, Federated States of"},{"1":"Monaco"},{"1":"New Caledonia"},{"1":"Northern Mariana Islands"},{"1":"Palau"},{"1":"Palestine, State of"},{"1":"Puerto Rico"},{"1":"Russian Federation"},{"1":"Samoa"},{"1":"San Marino"},{"1":"Sint Maarten (Dutch part)"},{"1":"Saint Kitts and Nevis"},{"1":"Saint Martin (French part)"},{"1":"Syrian Arab Republic"},{"1":"Tonga"},{"1":"Turks and Caicos Islands"},{"1":"Tuvalu"},{"1":"United States"},{"1":"Virgin Islands, U.S."}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["geography"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"American Samoa"},{"1":"Andorra"},{"1":"Antigua and Barbuda"},{"1":"Aruba"},{"1":"Bermuda"},{"1":"Cayman Islands"},{"1":"Curaçao"},{"1":"Czechia"},{"1":"Faroe Islands"},{"1":"Fiji"},{"1":"French Polynesia"},{"1":"Gibraltar"},{"1":"Greenland"},{"1":"Guam"},{"1":"Iran, Islamic Republic of"},{"1":"Isle of Man"},{"1":"Kiribati"},{"1":"Korea, Democratic People's Republic of"},{"1":"Korea, Republic of"},{"1":"Liechtenstein"},{"1":"Macao"},{"1":"Marshall Islands"},{"1":"Micronesia, Federated States of"},{"1":"Monaco"},{"1":"New Caledonia"},{"1":"Northern Mariana Islands"},{"1":"Palau"},{"1":"Palestine, State of"},{"1":"Russian Federation"},{"1":"Samoa"},{"1":"San Marino"},{"1":"Sint Maarten (Dutch part)"},{"1":"Saint Kitts and Nevis"},{"1":"Saint Martin (French part)"},{"1":"Syrian Arab Republic"},{"1":"Tonga"},{"1":"Turks and Caicos Islands"},{"1":"Tuvalu"},{"1":"United States"},{"1":"Virgin Islands, U.S."}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <pre class="r"><code># Manually fix country names that did not merge properly by renaming 
-# in the original GPS dataset and merging again
+# in the original moral preference dataset and merging again
 
 moral_preference_data[moral_preference_data == &quot;Czechia&quot;] &lt;- &quot;Czech Republic&quot;
 moral_preference_data[moral_preference_data == &quot;Iran, Islamic Republic of&quot;] &lt;- &quot;Iran&quot;
 moral_preference_data[moral_preference_data == &quot;Korea, Republic of&quot;] &lt;- &quot;South Korea&quot;
+moral_preference_data[moral_preference_data == &quot;Korea, Democratic People&#39;s Republic of&quot;] &lt;- &quot;North Korea&quot;
 moral_preference_data[moral_preference_data == &quot;Russian Federation&quot;] &lt;- &quot;Russia&quot;
 moral_preference_data[moral_preference_data == &quot;United States&quot;] &lt;- &quot;United States of America&quot;
 
 dataset &lt;- full_join(dataset, moral_preference_data, by = &quot;geography&quot;) </code></pre>
+</div>
+</div>
 <div id="final-result" class="section level2">
 <h2>Final Result</h2>
 <p>Write the final merged dataset into a .csv</p>
@@ -2031,7 +2098,6 @@ dataset &lt;- dataset %&gt;%
   arrange(country)
 
 write_csv(dataset, &quot;output_data/dataset.csv&quot;)</code></pre>
-</div>
 </div>
 
 
