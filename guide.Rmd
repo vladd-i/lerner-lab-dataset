@@ -10,14 +10,15 @@ library(readxl)
 ```
 # Overview
 
-The `dataset.csv` file contains the merged data by country from the following 6 sources:
+The `dataset.csv` file contains the merged data by country from the following 7 sources:
 
 - Gallup Analytics (16 questions with data from 2006 to 2020)
 - Differences in Empathic Concern and Perspective Taking Across 63 Countries (Chopik et al., 2017; data collected before 2016)
 - Global Preferences Survey (data collected in 2012)
-- Corruption Perceptions Index (data from 2012 to 2019)
+- Corruption Perceptions Index (data from 2012 to 2020)
 - Civic Honesty Around the Globe (Cohn et al., 2019; data collected between 2013 and 2016)
 - Universals and variations in moral decisions (Awad et al., 2020; data collected from 2017 to 2019)
+- Reappraisal COVID Baseline Emotion
 
 ## Gallup Analytics
 Captures 16 variables, broken down by year of observation (various ranges from 2006 to 2020, depending on a question). Values in the columns correspond to the percentages of people answering the following:
@@ -48,7 +49,7 @@ Captures 16 variables, broken down by year of observation (various ranges from 2
   
 ## Empathy
 * 3 variables:
-  + `mean_empathetic_concern`
+  + `mean_empathic_concern`
   + `mean_perspective_taking`
   + `mean_total_empathy`
 
@@ -61,8 +62,8 @@ gps_guide <- read_excel("gps_guide.xlsx")
 kable(gps_guide)
 ```
 
-## Corruption Perceptions Index (data from 2012 to 2019):
-* variables: `cpi_score_2012` to `cpi_score_2019`
+## Corruption Perceptions Index (data from 2012 to 2020):
+* variables: `cpi_score_2012` to `cpi_score_2020`
 
 ## Returning lost wallets
 * variables: `return_percentage` for each of the 4 experimental conditions: `NoMoney`, `Money`, `BigMoney`, `NoKey`
@@ -70,3 +71,17 @@ kable(gps_guide)
 ## Moral preferences in sacrificial dilemmas
 * variables `RML` to `Cultural_tigthness_and_looseness` (definitions should be integrated)
 * percentages choosing to sacrifice in each scenario variant: `Switch`, `Loop`, `Footbridge`
+
+## Reappraisal COVID Baseline Emotion
+* `gratitude`
+* `hope`
+* `love`
+* `inspiration`
+* `serenity`
+* `fear`
+* `anger`
+* `sadness`
+* `stress`
+* `distrust`
+* `loneliness`
+* `socialconnection`

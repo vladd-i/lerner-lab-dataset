@@ -349,15 +349,15 @@ I downloaded a dataset containing time series CPI data for ~180 countries from 2
 Clean and merge into our dataset:
 
 ```{r cpi1}
-cpi_data <- read_excel("input_data/CPI2019.xlsx", 
-    sheet = "CPI Timeseries 2012 - 2019", 
+cpi_data <- read_excel("input_data/CPI2020.xlsx", 
+    sheet = "CPI Timeseries 2012 - 2020", 
     skip = 2) %>%
   
   # Only keep CPI scores for each country from 2012 to 2019
   
   clean_names() %>%
   select(country, cpi_score_2012, cpi_score_2013, cpi_score_2014, cpi_score_2015,
-         cpi_score_2016, cpi_score_2017, cpi_score_2018, cpi_score_2019)
+         cpi_score_2016, cpi_score_2017, cpi_score_2018, cpi_score_2019, cpi_score_2020)
 ```
 
 ```{r cpi2}
@@ -367,6 +367,7 @@ dataset_with_cpi %>%
   filter(!(geography %in% dataset$geography)) %>%
   select(geography)
 ```
+
 ```{r cpi3}
 # Manually fix country names that did not merge properly by renaming 
 # in the original CPI dataset and merging again
@@ -481,6 +482,54 @@ moral_preference_data[moral_preference_data == "Russian Federation"] <- "Russia"
 moral_preference_data[moral_preference_data == "United States"] <- "United States of America"
 
 dataset <- full_join(dataset, moral_preference_data, by = "geography") 
+```
+
+
+## Reappraisal COVID Baseline Emotion
+
+```{r covid_emotions1}
+covid_emotions <- read.csv("input_data/reappraisal_COVID_baseline_emotion.csv") %>%
+  select(-n)
+
+# Get rid of country name abbreviations after "-" for easy merging
+
+covid_emotions <- covid_emotions %>%
+  mutate(country = map_chr(country, ~ str_split(., " - ", simplify = TRUE)[1])) %>%
+  rename(geography = "country")
+
+
+# Manually rename some country names
+
+covid_emotions[covid_emotions[, "geography"] == "United States of America (the)", "geography"] <- "United States of America"
+covid_emotions[covid_emotions[, "geography"] == "United Kingdom of Great Britain and Northern Ireland (the)", "geography"] <- "United Kingdom"
+covid_emotions[covid_emotions[, "geography"] == "Russian Federation (the)", "geography"] <- "Russia"
+covid_emotions[covid_emotions[, "geography"] == "Korea (the Republic of)", "geography"] <- "South Korea"
+covid_emotions[covid_emotions[, "geography"] == "Taiwan (Province of China)", "geography"] <- "Taiwan"
+covid_emotions[covid_emotions[, "geography"] == "Iran (Islamic Republic of)", "geography"] <- "Iran"
+covid_emotions[covid_emotions[, "geography"] == "Netherlands (the)", "geography"] <- "Netherlands"
+covid_emotions[covid_emotions[, "geography"] == "Philippines (the)", "geography"] <- "Philippines"
+dataset[dataset[, "geography"] == "Czech Republic", "geography"] <- "Czechia"
+```
+
+
+```{r covid_emotions2}
+# Merge with our dataset
+
+dataset_with_covid_emotions <- full_join(dataset, covid_emotions, 
+                                           by = "geography")
+
+# Check for country rows that did not merge correctly. Some countries might have 
+# not beeen in the original dataset, but others might just be named differently, 
+# which needs to be fixed.
+
+dataset_with_covid_emotions %>%
+  filter(!(geography %in% dataset$geography)) %>%
+  select(geography)
+
+# Final join
+
+dataset <- full_join(dataset, covid_emotions, by = "geography") 
+
 ```
 
 ## Final Result
